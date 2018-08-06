@@ -8,6 +8,9 @@ Aggregate slack's reaction.
 $ git clone https://github.com/maroemon58/slack-reaction.git
 $ cd slack-reaction
 $ npm install
+$ mv .env.sample .env
+$ vi .env
+# modify parameter
 $ node main.js
 ```
 
