@@ -8,12 +8,13 @@ const util = require('util');
 const slack = require('slack');
 const moment = require('moment-timezone');
 
-function getChannels(ts) {
+function getChannels(oldest, latest) {
   return new Promise(function(onFulfilled, onRejected) {
     slack.channels.list({ token: SLACK_TOKEN }).then(response => {
       onFulfilled({
         channels: response.channels.map(channel => channel.id),
-        ts: ts
+        oldest: oldest,
+        latest: latest
       });
     });
   });
@@ -23,8 +24,9 @@ function getReactions(responses) {
   return new Promise(function(onFulfilled, onRejected) {
     reactions = [];
 
-    const oldest = responses.ts;
     const channels = responses.channels;
+    const oldest = responses.oldest;
+    const latest = responses.latest;
 
     let i = 0;
     channels.map(channel => {
@@ -32,7 +34,8 @@ function getReactions(responses) {
         .history({
           token: SLACK_TOKEN,
           channel: channel,
-          oldest: oldest
+          oldest: oldest,
+          latest: latest
         })
         .then(response => {
           response.messages.map(message => {
@@ -52,11 +55,13 @@ function getReactions(responses) {
 }
 
 // oldest ※前日0時0分
-ts = moment()
+oldest = moment()
   .subtract(1, 'days')
   .startOf('day');
 
-getChannels(ts.unix())
+latest = moment().startOf('day');
+
+getChannels(oldest.unix(), latest.unix())
   .then(getReactions)
   .then(reactions => {
     // counter
@@ -89,7 +94,7 @@ getChannels(ts.unix())
     // create send message
     msg =
       'Good Morning!! ' +
-      ts.format('M/D(ddd)') +
+      oldest.format('M/D(ddd)') +
       'のリアクション集計したyo〜\n\n';
     for (reaction of sortReaction) {
       msg += reaction.name + ' : ' + reaction.count + '\n';
