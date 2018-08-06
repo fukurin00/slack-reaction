@@ -8,6 +8,8 @@ const util = require('util');
 const slack = require('slack');
 const moment = require('moment-timezone');
 
+const CronJob = require('cron').CronJob;
+
 function getChannels(oldest, latest) {
   return new Promise(function(onFulfilled, onRejected) {
     slack.channels.list({ token: SLACK_TOKEN }).then(response => {
@@ -90,34 +92,51 @@ sortReaction = reactions => {
   return msg;
 };
 
-// oldest ※前日0時0分
-oldest = moment()
-  .subtract(1, 'days')
-  .startOf('day');
+postMessage = () => {
+  // oldest ※前日0時0分
+  oldest = moment()
+    .subtract(1, 'days')
+    .startOf('day');
 
-latest = moment().startOf('day');
+  latest = moment().startOf('day');
 
-getChannels(oldest.unix(), latest.unix())
-  .then(getReactions)
-  .then(reactions => {
-    if (reactions.length === 0) {
-      msg =
-        'Good Morning!! ' +
-        oldest.format('M/D(ddd)') +
-        'のリアクションは・・・なしですyo〜';
-    } else {
-      msg =
-        'Good Morning!! ' +
-        oldest.format('M/D(ddd)') +
-        'のリアクション集計したyo〜\n\n';
-      msg += sortReaction(reactions);
-    }
+  getChannels(oldest.unix(), latest.unix())
+    .then(getReactions)
+    .then(reactions => {
+      if (reactions.length === 0) {
+        msg =
+          'Good Morning!! ' +
+          oldest.format('M/D(ddd)') +
+          'のリアクションは・・・なしですyo〜';
+      } else {
+        msg =
+          'Good Morning!! ' +
+          oldest.format('M/D(ddd)') +
+          'のリアクション集計したyo〜\n\n';
+        msg += sortReaction(reactions);
+      }
 
-    console.log(msg);
+      console.log(msg);
 
-    slack.chat.postMessage({
-      token: SLACK_BOT_TOKEN,
-      channel: SEND_CHANNEL,
-      text: msg
+      slack.chat.postMessage({
+        token: SLACK_BOT_TOKEN,
+        channel: SEND_CHANNEL,
+        text: msg
+      });
     });
-  });
+};
+const job = new CronJob({
+  /*
+  Seconds: 0-59
+  Minutes: 0-59
+  Hours: 0-23
+  Day of Month: 1-31
+  Months: 0-11
+  Day of Week: 0-6
+  */
+  cronTime: '0 0 9 * * *',
+  onTick: postMessage,
+  start: false,
+  timeZone: 'Asia/Tokyo'
+});
+job.start();
