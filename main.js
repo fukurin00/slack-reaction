@@ -1,9 +1,11 @@
 // load .env
 require('dotenv').config();
+const SLACK_TOKEN = process.env.SLACK_TOKEN;
+const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN;
+const SEND_CHANNEL = process.env.SEND_CHANNEL;
+
 const util = require('util');
 const slack = require('slack');
-
-const SLACK_TOKEN = process.env.SLACK_TOKEN;
 
 function getChannels(ts) {
   return new Promise(function(onFulfilled, onRejected) {
@@ -58,6 +60,32 @@ getChannels(ts)
       totalReaction[name] += reaction.count;
     });
 
-    // result
-    console.log(util.inspect(totalReaction, { maxArrayLength: null }));
+    // convert for sort
+    sortReaction = [];
+    for (name in totalReaction) {
+      sortReaction.push({
+        name: name,
+        count: totalReaction[name]
+      });
+    }
+
+    sortReaction = sortReaction.sort((a, b) => {
+      if (a.count > b.count) return -1;
+      else if (a.count < b.count) return 1;
+      else return 0;
+    });
+    console.log(sortReaction);
+
+    // create send message
+    msg = 'Good Morning!! 先日のリアクション集計したyo〜\n\n';
+    for (reaction of sortReaction) {
+      msg += reaction.name + ' : ' + reaction.count + '\n';
+    }
+    console.log(msg);
+
+    slack.chat.postMessage({
+      token: SLACK_BOT_TOKEN,
+      channel: SEND_CHANNEL,
+      text: msg
+    });
   });
