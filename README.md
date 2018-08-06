@@ -1,1 +1,20 @@
 # slack-reaction
+
+## Overview
+Aggregate slack's reaction.
+
+## Install
+```bash
+$ git clone https://github.com/maroemon58/slack-reaction.git
+$ cd slack-reaction
+$ npm install
+$ node main.js
+```
+
+## Licence
+
+[GNU](https://github.com/maroemon58/slack-reaction/blob/master/LICENSE)
+
+## Author
+
+[maroemon58](https://github.com/maroemon58)
