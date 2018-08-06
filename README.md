@@ -2,7 +2,7 @@
 
 ## Overview
 Aggregate slack's reaction.
-![sample](https://imgur.com/a/mFgEzC4)
+![sample](https://imgur.com/lPDCbFG)
 
 ## Install
 ```bash
