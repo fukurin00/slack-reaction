@@ -7,7 +7,7 @@ Aggregate slack's reaction.
 
 ## Install
 ```bash
-$ git clone https://github.com/maroemon58/slack-reaction.git
+$ git clone https://github.com/yusukeito58/slack-reaction.git
 $ cd slack-reaction
 $ npm install
 $ mv .env.sample .env
@@ -18,8 +18,8 @@ $ node main.js
 
 ## Licence
 
-[GNU](https://github.com/maroemon58/slack-reaction/blob/master/LICENSE)
+[GNU](https://github.com/yusukeito58/slack-reaction/blob/master/LICENSE)
 
 ## Author
 
-[maroemon58](https://github.com/maroemon58)
+[yusukeito58](https://github.com/yusukeito58)
