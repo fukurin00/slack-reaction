@@ -110,13 +110,14 @@ postMessage = () => {
     .then(reactions => {
       if (reactions.length === 0) {
         msg =
+          'Good Morning!! ' +
           oldest.format('M/D(ddd)') +
-          'のリアクションは・・・なしですyo';
+          'のリアクションは・・・なしですyo〜';
       } else {
         msg =
-          'デ、デ、デデdeででデデータ集計しましたっ！' +
+          'Good Morning!! ' +
           oldest.format('M/D(ddd)') +
-          'のリアクションですyo\n\n';
+          'のリアクション集計したyo〜\n\n';
         msg += sortResult(reactions);
       }
 
@@ -138,7 +139,7 @@ const job = new CronJob({
   Months: 0-11
   Day of Week: 0-6
   */
-  cronTime: '0 35 9 * * *',
+  cronTime: '0 0 9 * * *',
   onTick: postMessage,
   start: false,
   timeZone: 'Asia/Tokyo'
