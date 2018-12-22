@@ -12,14 +12,19 @@ const CronJob = require('cron').CronJob;
 
 function getChannels(oldest, latest) {
   return new Promise(function(onFulfilled, onRejected) {
-    slack.channels.list({ token: SLACK_TOKEN }).then(response => {
+    const param = {
+      token: SLACK_TOKEN,
+      exclude_archived: true,
+      types: 'public_channel, private_channel'
+    };
+    slack.conversations.list(param).then(response => {
       onFulfilled({
         channels: response.channels.map(channel => channel.id),
         oldest: oldest,
         latest: latest
       });
     });
-  });
+   });
 }
 
 function getReactions(responses) {
@@ -32,7 +37,7 @@ function getReactions(responses) {
 
     let i = 0;
     channels.map(channel => {
-      slack.channels
+      slack.conversations
         .history({
           token: SLACK_TOKEN,
           channel: channel,
@@ -56,7 +61,7 @@ function getReactions(responses) {
   });
 }
 
-sortReaction = reactions => {
+sortResult = reactions => {
   // counter
   totalReaction = [];
 
@@ -95,8 +100,8 @@ sortReaction = reactions => {
 postMessage = () => {
   // oldest ※前日0時0分
   oldest = moment()
-    .subtract(1, 'days')
-    .startOf('day');
+  .subtract(1, 'days')
+  .startOf('day');
 
   latest = moment().startOf('day');
 
@@ -113,7 +118,7 @@ postMessage = () => {
           'Good Morning!! ' +
           oldest.format('M/D(ddd)') +
           'のリアクション集計したyo〜\n\n';
-        msg += sortReaction(reactions);
+        msg += sortResult(reactions);
       }
 
       console.log(msg);
