@@ -1,14 +1,17 @@
 // load .env
-require('dotenv').config();
+// require('dotenv').config();
 const SLACK_TOKEN = process.env.SLACK_TOKEN;
 const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN;
 const SEND_CHANNEL = process.env.SEND_CHANNEL;
 
+const {WebClient} = require('@slack/web-api');
 const util = require('util');
 const slack = require('slack');
 const moment = require('moment-timezone');
 
 const CronJob = require('cron').CronJob;
+
+const web = new WebClient(SLACK_TOKEN);
 
 function getChannels(oldest, latest) {
   return new Promise(function(onFulfilled, onRejected) {
@@ -26,6 +29,7 @@ function getChannels(oldest, latest) {
     });
    });
 }
+
 
 function getReactions(responses) {
   return new Promise(function(onFulfilled, onRejected) {
@@ -61,16 +65,46 @@ function getReactions(responses) {
   });
 }
 
-sortResult = reactions => {
+function getUsers() {
+  // You probably want to use a database to store any user information ;)
+
+  return new Promise(function(onFulfilled, onRejected) {
+    const param = {
+      token: SLACK_TOKEN,
+    };
+    let usersMap = {};
+    slack.users.list(param).then(response => {
+      response.members.forEach(user => {
+        usersMap[user.id] = user.name;
+      });
+      onFulfilled(
+        usersMap  
+      );
+    });
+   });
+  
+}
+
+sortResult = (reaction) => {
   // counter
   totalReaction = [];
+  totalUsers = {};
+  usermap = getUsers()
 
   reactions.map(reaction => {
     name = ':' + reaction.name + ':';
     if (name in totalReaction === false) {
       totalReaction[name] = 0;
     }
-    totalReaction[name] += reaction.count;
+    totalReaction[name] += reaction.count
+
+    reaction.users.map(user =>{
+      if(name in totalUsers === false){
+        totalUsers[name] = [];
+      }
+      totalUsers[name].push(usermap[user]);
+    } )
+    
   });
 
   // convert for sort
@@ -91,7 +125,7 @@ sortResult = reactions => {
   // create send message
   msg = '';
   for (reaction of sortReaction) {
-    msg += reaction.name + ' : ' + reaction.count + '\n';
+    msg += reaction.name + ' : ' + reaction.count + ' : ' + totalUsers[reaction.name].toString() +'\n';
   }
 
   return msg;
@@ -100,7 +134,7 @@ sortResult = reactions => {
 postMessage = () => {
   // oldest ※前日0時0分
   oldest = moment()
-  .subtract(1, 'days')
+  .subtract(7, 'days')
   .startOf('day');
 
   latest = moment().startOf('day');
@@ -110,38 +144,37 @@ postMessage = () => {
     .then(reactions => {
       if (reactions.length === 0) {
         msg =
-          'Good Morning!! ' +
-          oldest.format('M/D(ddd)') +
-          'のリアクションは・・・なしですyo〜';
+          ':ido: 過去7日間のリアクション： \n' +
+          '...';
       } else {
         msg =
-          'Good Morning!! ' +
-          oldest.format('M/D(ddd)') +
-          'のリアクション集計したyo〜\n\n';
+          ':ido: 過去7日間のリアクション: \n';
         msg += sortResult(reactions);
       }
 
       console.log(msg);
 
-      slack.chat.postMessage({
-        token: SLACK_BOT_TOKEN,
-        channel: SEND_CHANNEL,
-        text: msg
-      });
+      // slack.chat.postMessage({
+      //   token: SLACK_BOT_TOKEN,
+      //   channel: SEND_CHANNEL,
+      //   text: msg
+      // });
     });
 };
-const job = new CronJob({
-  /*
-  Seconds: 0-59
-  Minutes: 0-59
-  Hours: 0-23
-  Day of Month: 1-31
-  Months: 0-11
-  Day of Week: 0-6
-  */
-  cronTime: '0 0 9 * * *',
-  onTick: postMessage,
-  start: false,
-  timeZone: 'Asia/Tokyo'
-});
-job.start();
+
+postMessage();
+// const job = new CronJob({
+//   /*
+//   Seconds: 0-59
+//   Minutes: 0-59
+//   Hours: 0-23
+//   Day of Month: 1-31
+//   Months: 0-11
+//   Day of Week: 0-6
+//   */
+//   cronTime: '0 0 9 * * *',
+//   onTick: postMessage,
+//   start: false,
+//   timeZone: 'Asia/Tokyo'
+// });
+// job.start();

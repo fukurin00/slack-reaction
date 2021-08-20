@@ -16,10 +16,3 @@ $ vi .env
 $ node main.js
 ```
 
-## Licence
-
-[GNU](https://github.com/yusukeito58/slack-reaction/blob/master/LICENSE)
-
-## Author
-
-[yusukeito58](https://github.com/yusukeito58)
