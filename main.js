@@ -1,17 +1,17 @@
-// load .env
-// require('dotenv').config();
-const SLACK_TOKEN = process.env.SLACK_TOKEN;
-const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN;
+require('dotenv').config();
+const SLACK_BOT_TOKEN = process.env.SLACK_TOKEN;
 const SEND_CHANNEL = process.env.SEND_CHANNEL;
+const SLACK_TOKEN = process.env.SLACK_USER_TOKEN
 
-const {WebClient} = require('@slack/web-api');
 const util = require('util');
 const slack = require('slack');
-const moment = require('moment-timezone');
+const moment = require('moment');
+
 
 const CronJob = require('cron').CronJob;
 
-const web = new WebClient(SLACK_TOKEN);
+const express = require('express');
+const bodyParser = require("body-parser");
 
 function getChannels(oldest, latest) {
   return new Promise(function(onFulfilled, onRejected) {
@@ -58,17 +58,19 @@ function getReactions(responses) {
             onFulfilled(reactions);
           }
         })
-        .catch(error => {
-          console.log('error!!');
-        });
+        // .catch(error => {
+        //   console.log('history get error!!');
+        // });
     });
   });
 }
 
-function getUsers() {
+function getUsers(responses) {
   // You probably want to use a database to store any user information ;)
 
   return new Promise(function(onFulfilled, onRejected) {
+    const reactions = responses;
+
     const param = {
       token: SLACK_TOKEN,
     };
@@ -77,19 +79,18 @@ function getUsers() {
       response.members.forEach(user => {
         usersMap[user.id] = user.name;
       });
-      onFulfilled(
-        usersMap  
-      );
+      onFulfilled({
+        userMap: usersMap,
+        reactions: reactions
+      });
     });
    });
-  
 }
 
-sortResult = (reaction) => {
+sortResult = (reaction, usermap) => {
   // counter
   totalReaction = [];
   totalUsers = {};
-  usermap = getUsers()
 
   reactions.map(reaction => {
     name = ':' + reaction.name + ':';
@@ -102,7 +103,7 @@ sortResult = (reaction) => {
       if(name in totalUsers === false){
         totalUsers[name] = [];
       }
-      totalUsers[name].push(usermap[user]);
+      totalUsers[name].push(':'+usermap[user]+':');
     } )
     
   });
@@ -125,56 +126,89 @@ sortResult = (reaction) => {
   // create send message
   msg = '';
   for (reaction of sortReaction) {
-    msg += reaction.name + ' : ' + reaction.count + ' : ' + totalUsers[reaction.name].toString() +'\n';
+    msg += reaction.name + ' : ' + reaction.count + ' : ' + totalUsers[reaction.name].join(' ') +'\n';
   }
 
   return msg;
 };
 
-postMessage = () => {
-  // oldest ※前日0時0分
-  oldest = moment()
-  .subtract(7, 'days')
-  .startOf('day');
-
-  latest = moment().startOf('day');
+postMessage = (from=0, to=0) => {
+  if (from === 0){
+    // oldest ※前日0時0分
+    oldest = moment()
+    .subtract(7, 'days')
+    .startOf('day');
+  }
+  if (to === 0){
+    latest = moment().startOf('day');
+  }
 
   getChannels(oldest.unix(), latest.unix())
     .then(getReactions)
-    .then(reactions => {
+    .then(getUsers)
+    .then(responses => {
+      const reactions = responses.reactions;
+      const usermap = responses.userMap; 
       if (reactions.length === 0) {
         msg =
-          ':ido: 過去7日間のリアクション： \n' +
+          ':idosan: 過去7日間のリアクション： \n' +
           '...';
       } else {
         msg =
-          ':ido: 過去7日間のリアクション: \n';
-        msg += sortResult(reactions);
+          ':idosan: 過去7日間のリアクション: \n';
+        msg += sortResult(reactions,usermap);
       }
 
       console.log(msg);
 
-      // slack.chat.postMessage({
-      //   token: SLACK_BOT_TOKEN,
-      //   channel: SEND_CHANNEL,
-      //   text: msg
-      // });
+      const res = slack.chat.postMessage({
+        token: SLACK_BOT_TOKEN,
+        channel: SEND_CHANNEL,
+        icon_emoji: ':ido:',
+        text: msg
+      }).then(()=>{
+        console.log(res);
+      });
+      
     });
 };
 
-postMessage();
-// const job = new CronJob({
-//   /*
-//   Seconds: 0-59
-//   Minutes: 0-59
-//   Hours: 0-23
-//   Day of Month: 1-31
-//   Months: 0-11
-//   Day of Week: 0-6
-//   */
-//   cronTime: '0 0 9 * * *',
-//   onTick: postMessage,
-//   start: false,
-//   timeZone: 'Asia/Tokyo'
-// });
-// job.start();
+// postMessage();
+const job = new CronJob({
+  /*
+  Seconds: 0-59
+  Minutes: 0-59
+  Hours: 0-23
+  Day of Month: 1-31
+  Months: 0-11
+  Day of Week: 0-6
+  */
+  cronTime: '0 0 9 * * *',
+  onTick: postMessage,
+  start: false,
+  timeZone: 'Asia/Tokyo'
+});
+job.start();
+
+
+const app = express();
+
+const port = process.env.PORT || 8090;
+app.listen(port, () => console.log(`Listening on port ${port}...`));
+
+app.get('/', (req, res) => {
+    res.send('Simple REST API\n');
+});
+
+app.post('/api/emoji', (req, res) => {
+  const calc = req.body;
+
+  console.log(`[${new Date()}] request = [${JSON.stringify(calc)}]`);
+
+  const operator = calc.operator;
+  const from = calc.from;
+  const to = calc.to;
+
+  postMessage(from, to);
+  res.json({"result": "OK\n"});;
+});
