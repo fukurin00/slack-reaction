@@ -3,6 +3,8 @@ const SLACK_BOT_TOKEN = process.env.SLACK_TOKEN;
 const SEND_CHANNEL = process.env.SEND_CHANNEL;
 const SLACK_TOKEN = process.env.SLACK_USER_TOKEN
 
+const port = process.env.PORT || 8090;
+
 const util = require('util');
 const slack = require('slack');
 const moment = require('moment');
@@ -11,7 +13,6 @@ const moment = require('moment');
 const CronJob = require('cron').CronJob;
 
 const express = require('express');
-const bodyParser = require("body-parser");
 
 function getChannels(oldest, latest) {
   return new Promise(function(onFulfilled, onRejected) {
@@ -132,16 +133,15 @@ sortResult = (reaction, usermap) => {
   return msg;
 };
 
-postMessage = (from=0, to=0) => {
-  if (from === 0){
+postMessage = (day=0) => {
     // oldest ※前日0時0分
     oldest = moment()
-    .subtract(7, 'days')
+    .subtract(day, 'days')
     .startOf('day');
-  }
-  if (to === 0){
-    latest = moment().startOf('day');
-  }
+  
+  
+  latest = moment().startOf('day');
+  
 
   getChannels(oldest.unix(), latest.unix())
     .then(getReactions)
@@ -151,11 +151,11 @@ postMessage = (from=0, to=0) => {
       const usermap = responses.userMap; 
       if (reactions.length === 0) {
         msg =
-          ':idosan: 過去7日間のリアクション： \n' +
+          ':idosan: 過去'+day+'日間のリアクション： \n' +
           '...';
       } else {
         msg =
-          ':idosan: 過去7日間のリアクション: \n';
+          ':idosan: 過去'+day+'日間のリアクション: \n';
         msg += sortResult(reactions,usermap);
       }
 
@@ -193,22 +193,18 @@ job.start();
 
 const app = express();
 
-const port = process.env.PORT || 8090;
 app.listen(port, () => console.log(`Listening on port ${port}...`));
 
 app.get('/', (req, res) => {
     res.send('Simple REST API\n');
 });
 
-app.post('/api/emoji', (req, res) => {
-  const calc = req.body;
+app.get('/api/emoji', (req, res) => {
 
-  console.log(`[${new Date()}] request = [${JSON.stringify(calc)}]`);
+  console.log(`[${new Date()}] request = [${req.query}]`);
 
-  const operator = calc.operator;
-  const from = calc.from;
-  const to = calc.to;
+  const day = req.query.day;
 
-  postMessage(from, to);
+  postMessage(day);
   res.json({"result": "OK\n"});;
 });
